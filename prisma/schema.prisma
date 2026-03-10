@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  accounts      Account[]
+  forms         Form[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Form {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  isPublished Boolean  @default(false)
+  webhookUrl  String?  // Optional trigger
+  fields      Field[]
+  responses   Response[]
+  analytics   AnalyticsSummary?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Field {
+  id               String   @id @default(cuid())
+  formId           String
+  form             Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  type             String   // "short_text", "long_text", "multiple_choice", "rating"
+  label            String
+  options          String?  // JSON string for multiple choice
+  required         Boolean  @default(false)
+  conditionalLogic String?  // JSON string for show/hide rules
+  order            Int      @default(0)
+  answers          Answer[]
+}
+
+model Response {
+  id        String   @id @default(cuid())
+  formId    String
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers   Answer[]
+  createdAt DateTime @default(now())
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  responseId String
+  response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  fieldId    String
+  field      Field    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value      String
+}
+
+model AnalyticsSummary {
+  id               String   @id @default(cuid())
+  formId           String   @unique
+  form             Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  sentimentScore   Float?
+  keyThemes        String?  // JSON array of strings
+  generatedSummary String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
